@@ -1,5 +1,5 @@
 /*
- * internal_flash_api.c
+ * internal_flash_api.h
  *
  *  Created on: 11. Apr. 2016
  *      Author: martin.tomasini2
@@ -49,12 +49,12 @@
 
 int WriteFlash(uint32_t ui32Address, const uint8_t* pData, uint32_t ui32DataSize)
 {
+    volatile uint8_t ui8DataBuffer;
+
     if((ui32Address > FLASH_LAST_SECTOR_END_ADDRESS) || (ui32Address < FLASH_SECTOR_0_START_ADDRESS))
     {
         return -2;
     }
-
-    volatile uint16_t uintDataBuffer;
 
     // Check if it is 2 bytes aligned
     if(0 != (ui32Address & 1))
@@ -64,20 +64,21 @@ int WriteFlash(uint32_t ui32Address, const uint8_t* pData, uint32_t ui32DataSize
 
     HAL_FLASH_Unlock();
 
-    // Write payload byte per byte
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+
     for(uint32_t i = 0; i < ui32DataSize; i += 2, ui32Address += 2)
     {
         if(i < ui32DataSize - 1)
         {
-            uintDataBuffer = pData[i];
-            uintDataBuffer +=  (uint16_t)(pData[i + 1] << 8);
+            ui8DataBuffer = pData[i];
+            ui8DataBuffer +=  (uint16_t)(pData[i + 1] << 8);
         }
         else
         {
-            uintDataBuffer = pData[i];
-            uintDataBuffer += 0xFF00;
+            ui8DataBuffer = pData[i];
+            ui8DataBuffer += 0xFF00;
         }
-        if(HAL_OK !=  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, ui32Address, (uint64_t)uintDataBuffer))
+        if(HAL_OK !=  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, ui32Address, (uint64_t)ui8DataBuffer))
         {
             HAL_FLASH_Lock();
 
@@ -120,6 +121,11 @@ int EraseSectorByNumber(uint16_t ui16Sector)
         EraseInitStruct.NbSectors = 1;
         EraseInitStruct.VoltageRange = FLASH_VOLTAGE_RANGE_3; // Todo: check if correct!!!!
 
+        /* Clear pending flags (if any) */
+        __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR |
+                FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR |
+                FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+
         if (HAL_FLASHEx_Erase(&EraseInitStruct, &ui32PageError) != HAL_OK)
         {
             HAL_FLASH_Lock();
@@ -127,7 +133,7 @@ int EraseSectorByNumber(uint16_t ui16Sector)
             return -1;
         }
 
-        while(HAL_OK != FLASH_WaitForLastOperation((uint32_t)50000)){};
+        while(HAL_OK != FLASH_WaitForLastOperation((uint32_t)5000)){};
 
         HAL_FLASH_Lock();
 
@@ -180,16 +186,18 @@ int EraseSectorByAddress(uint32_t ui32Address)
 
 }
 
-int GetNumOfSectors(void)
+int GetNumOfSectors(uint32_t* pui32NumOfVectors)
 {
-    return NUMBER_OF_FLASH_SECTORS;
+    *pui32NumOfVectors = NUMBER_OF_FLASH_SECTORS;
+
+    return 0;
 }
 
-void GetSectorStartAdd(uint32_t ui32Sector, uint32_t* pui32Address)
+int GetSectorStartAdd(uint32_t ui32Sector, uint32_t* pui32Address)
 {
     if(ui32Sector > NUMBER_OF_FLASH_SECTORS - 1)
     {
-        return;// - 1;
+        return - 1;
     }
     switch(ui32Sector)
     {
@@ -220,11 +228,11 @@ void GetSectorStartAdd(uint32_t ui32Sector, uint32_t* pui32Address)
     }
 }
 
-void GetSectorEndAdd(uint32_t ui32Sector, uint32_t* pui32Address)
+int GetSectorEndAdd(uint32_t ui32Sector, uint32_t* pui32Address)
 {
     if(ui32Sector > NUMBER_OF_FLASH_SECTORS - 1)
     {
-        return;// - 1;
+        return - 1;
     }
     switch(ui32Sector)
     {
