@@ -66,19 +66,9 @@ int WriteFlash(uint32_t ui32Address, const uint8_t* pData, uint32_t ui32DataSize
 
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
 
-    for(uint32_t i = 0; i < ui32DataSize; i += 2, ui32Address += 2)
+    for(uint32_t i = 0; i < ui32DataSize; i++, ui32Address++)
     {
-        if(i < ui32DataSize - 1)
-        {
-            ui8DataBuffer = pData[i];
-            ui8DataBuffer +=  (uint16_t)(pData[i + 1] << 8);
-        }
-        else
-        {
-            ui8DataBuffer = pData[i];
-            ui8DataBuffer += 0xFF00;
-        }
-        if(HAL_OK !=  HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, ui32Address, (uint64_t)ui8DataBuffer))
+        if(HAL_OK !=  HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, ui32Address, (uint64_t)ui8DataBuffer))
         {
             HAL_FLASH_Lock();
 
