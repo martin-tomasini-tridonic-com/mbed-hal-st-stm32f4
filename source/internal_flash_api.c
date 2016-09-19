@@ -56,12 +56,6 @@ int WriteFlash(uint32_t ui32Address, const uint8_t* pData, uint32_t ui32DataSize
         return -2;
     }
 
-    // Check if it is 2 bytes aligned
-    if(0 != (ui32Address & 1))
-    {
-        return -3;
-    }
-
     HAL_FLASH_Unlock();
 
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
